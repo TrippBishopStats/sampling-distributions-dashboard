@@ -1,0 +1,139 @@
+---
+title: "Exploring sampling distribution concepts"
+format: dashboard
+theme: superhero
+server: shiny
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(latex2exp)
+library(shinydashboard)
+```
+
+```{r}
+#| context: server
+
+generate_samples <- function(data, size=50, reps=1) {
+  
+  sample_set <- tibble(ball_ID=c(0), colour=c(''), replicate=c(0))
+  
+  for(i in 1:reps) {
+    # draw of new sample
+    sample_draw <- data |> 
+      sample_n(size = size) |> 
+      bind_cols(replicate=i)
+    
+    # add new sample to the master tibble  
+    sample_set <- bind_rows(sample_set, sample_draw)
+  }
+  
+  sample_set |>
+    # remove the dummy row and then rearrage and tibble and add grouping.
+    filter(replicate != 0) |> 
+    relocate(replicate, before=ball_ID) |> 
+    group_by(replicate)
+}
+
+
+# generate the bowl with 900 red and 1500 white balls
+bowl <- rep(c("Red", "White"), times=c(900, 1500)) |> 
+  # randomise the bowl
+  sample() |>
+  # create a tibble that will be easier to work with using tidyverse functions.
+  tibble(ball_ID = 1:2400, colour=_)
+
+samples <- reactive({
+  generate_samples(bowl, size=input$sample_size, reps = input$replications) |> 
+    summarise(
+      prop_red = sum(colour == "Red")/n()
+    )
+})
+
+output$distPlot <- renderPlot({
+  
+  samples() |> 
+    ggplot(aes(x=prop_red)) +
+    geom_histogram(fill="steelblue", colour="black", boundary=0.4, binwidth=0.05, alpha=0.7) +
+    labs(
+      x=TeX("Sample proportion $\\widehat{p}$"),
+      y="Count",
+      title = "The distribution of sample proportions",
+      subtitle = "How does the shape of the distribution change as the sample size and number of samples changes?"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 20),
+      plot.subtitle = element_text(size = 14),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size=14)
+      
+    )
+  
+})
+
+output$meanBox <- renderValueBox({
+  box(
+    round(mean(samples()$prop_red),4),
+    title = "Distribution mean"
+  )
+})
+
+output$sdBox <- renderValueBox({
+  box(
+    round(sd(samples()$prop_red), 4),
+    title = "Distribution standard error"
+  )
+})
+```
+
+# Sampling Distributions
+
+## {title="Introduction to sampling distributions"}
+
+I’ll start with a function that creates the UI for a single variable. It’ll return a range slider for numeric inputs, a multi-select for factor inputs, and NULL (nothing) for all other types.
+
+## {title="Inputs and Outputs"}
+
+I’ll start with a function that creates the UI for a single variable. It’ll return a range slider for numeric inputs, a multi-select for factor inputs, and NULL (nothing) for all other types.
+
+## {scrolling="false"}
+
+```{r}
+#| content: card-sidebar
+#| width: 25%
+
+replicate_count <- c("10"=10,"100"=100,"500"=500,"1000"=1000)
+
+sliderInput("sample_size", "Sample size:", 
+            min = 25, max = 100, value = 50, step=25, ticks=FALSE, width="95%")
+selectInput("replications", "Number of samples taken:", 
+            choices=replicate_count, selected=replicate_count[2], width="95%")
+```
+
+
+```{r}
+#| title: Sampling distribution visualization
+plotOutput("distPlot")
+```
+
+## {height="20%"}
+
+### {width="50%"}
+
+```{r}
+valueBoxOutput("meanBox")
+```
+
+### {width="50%"}
+```{r}
+valueBoxOutput("sdBox")
+```
+
+# The Central Limit Theorem
+
+
+
+# Bootstrapping
+
+
