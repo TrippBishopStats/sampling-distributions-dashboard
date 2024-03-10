@@ -1,7 +1,10 @@
 ---
 title: "Exploring sampling distribution concepts"
-format: dashboard
-theme: superhero
+format: 
+  dashboard:
+    theme:
+      - spacelab
+      - custom.scss
 server: shiny
 ---
 
@@ -14,8 +17,14 @@ library(shinydashboard)
 ```{r}
 #| context: server
 
+source('global.R', local = FALSE)
+
+################################################################################
+### FUNCTION DEFINIITIONS
+################################################################################
+
 generate_samples <- function(data, size=50, reps=1) {
-  
+  # coerce the tibble to have specific fields in the specified order.
   sample_set <- tibble(ball_ID=c(0), colour=c(''), replicate=c(0))
   
   for(i in 1:reps) {
@@ -29,19 +38,68 @@ generate_samples <- function(data, size=50, reps=1) {
   }
   
   sample_set |>
-    # remove the dummy row and then rearrage and tibble and add grouping.
+    # remove the dummy row and then rearrange and tibble and add grouping.
     filter(replicate != 0) |> 
     relocate(replicate, before=ball_ID) |> 
     group_by(replicate)
 }
 
+generate_dist_pdf <- function(dist = "norm") {
+  X <- Y <- NULL
+  if (dist == "beta") {
+    X <- seq(from=0, to=1, by=0.005)
+    Y <- dbeta(X, 4, 9)
+  } else if (dist == "chisq") {
+    X <- seq(from=0, to=5, by=0.01)
+    Y <- dchisq(X, df=1)
+  } else if (dist == "gamma") {
+    X <- seq(from=0, to=16, by=0.04)
+    Y <- dgamma(X, shape=2,scale=2)
+  } else if (dist == "unif") {
+    X <- seq(from=0, to=5, by=0.02)
+    Y <- dunif(X, min=1, max=4)
+  } else {
+    X <- seq(from=-25, to=35, by=0.15)
+    Y <- dnorm(X, mean=5, sd=10)
+  }
+  
+  tibble(x=X, y=Y)
+}
 
-# generate the bowl with 900 red and 1500 white balls
-bowl <- rep(c("Red", "White"), times=c(900, 1500)) |> 
-  # randomise the bowl
-  sample() |>
-  # create a tibble that will be easier to work with using tidyverse functions.
-  tibble(ball_ID = 1:2400, colour=_)
+generate_sample_dist <- function(dist="norm", size=50, reps=1) {
+  
+  # coerce the tibble to have specific fields in the specified order.
+  sample_set <- tibble(replicate=c(0), x=c(0))
+  
+  for(i in 1:reps) {
+    # draw of new sample
+    if (dist == "beta") {
+      data <- rbeta(size, 4, 9)
+    } else if (dist == "chisq") {
+      data <- rchisq(size, df=1)
+    } else if (dist == "gamma") {
+      data <- rgamma(size, shape=2,scale=2)
+    } else if (dist == "unif") {
+      data <- runif(size, min=1, max=4)
+    } else {
+      data <- rnorm(size, mean=5, sd=10)
+    }
+    
+    sample_draw <- tibble(replicate=i, x=data)
+    
+    # add new sample to the master tibble  
+    sample_set <- bind_rows(sample_set, sample_draw)
+  }
+  
+  sample_set |>
+    # remove the dummy row and then rearrange and tibble and add grouping.
+    filter(replicate != 0) |> 
+    group_by(replicate)
+}
+
+################################################################################
+### REACTIVE OBJECTS
+################################################################################
 
 samples <- reactive({
   generate_samples(bowl, size=input$sample_size, reps = input$replications) |> 
@@ -50,26 +108,57 @@ samples <- reactive({
     )
 })
 
-output$distPlot <- renderPlot({
+dist_pdf_data <- reactive({
+  generate_dist_pdf(input$distributions)
+})
+
+sampling_dist_data <- reactive({
+  generate_sample_dist(input$distributions, size=input$dist_sample_size, reps=input$dist_replications) |> 
+    summarise(
+      sample_mean = mean(x)
+    )
+})
+
+output$propDistPlot <- renderPlot({
   
   samples() |> 
     ggplot(aes(x=prop_red)) +
     geom_histogram(fill="steelblue", colour="black", boundary=0.4, binwidth=0.05, alpha=0.7) +
     labs(
-      x=TeX("Sample proportion $\\widehat{p}$"),
+      x="Sample proportion of red balls",
       y="Count",
       title = "The distribution of sample proportions",
       subtitle = "How does the shape of the distribution change as the sample size and number of samples changes?"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(size = 20),
-      plot.subtitle = element_text(size = 14),
-      axis.title = element_text(size = 14),
-      axis.text = element_text(size=14)
-      
     )
   
+})
+
+output$distPdfPlot <- renderPlot({
+  
+  dist_name <- names(which(distribution_options == input$distributions))
+  
+  dist_pdf_data() |> 
+    ggplot(aes(x=x, y=y)) +
+    geom_line(linewidth=1) +
+    labs(
+      x="x",
+      y="Likelihood",
+      title = str_glue("The {dist_name} distribution")
+    )
+  
+})
+
+output$sampleDistPlot <- renderPlot({
+  dist_name <- names(which(distribution_options == input$distributions))
+  sampling_dist_data() |> 
+    ggplot(aes(x=sample_mean)) +
+    geom_histogram(fill="steelblue", colour="black", alpha=0.7, bins=30) +
+    labs(
+      x="Sample mean",
+      y="Count",
+      title = str_glue("The distribution of sample means for {dist_name}"),
+      subtitle = "How does the shape of the distribution change as the sample size and number of samples changes?"
+    )
 })
 
 output$meanBox <- renderValueBox({
@@ -87,23 +176,38 @@ output$sdBox <- renderValueBox({
 })
 ```
 
+# Introduction 
+
+## {height="50%"}
+
+::: {.card title="Introduction to sampling distributions"}
+**What is a sampling distribution?** After exploring the scenario below, you should have a good of what a sampling distribution is and how it changes based on the sampling procedure employed. You should understand how the number of samples take and the size of the samples affects the mean and standard error of the population parameter being studied. You will also be able to explain the basic idea behind the **Central Limit Theorem** and get some hands on experience with the concept of **bootstrapping**. All set? Let's get started!
+
+We often don't know the value of the population parameter that we're trying to study. To better understand the value of the parameter, we can either take a **census** or take one more more **samples**. A census involves making an observation of every individual in the population. This is often either impossible or prohibitively time consuming and expensive. This is why sampling is typically used to make an estimate of the parameter. When sampling, we take one or more samples of a given size from the population. In practice, a single sample is often taken and the sample size is a large as time and budget will allow.
+:::
+
+## {height="50%"}
+
+::: {.card title="Important terms"}
+
+
+:::
+
 # Sampling Distributions
 
-## {title="Introduction to sampling distributions"}
+##
 
-I’ll start with a function that creates the UI for a single variable. It’ll return a range slider for numeric inputs, a multi-select for factor inputs, and NULL (nothing) for all other types.
+::: {.card title="A basic sampling scenario"}
+In this scenario, we want to know what proportion of balls in a bowl are red. The bowl contains 2400 balls, so taking a census would be really tedious. There are different shovels that can be used to take samples and many samples can be taken.
 
-## {title="Inputs and Outputs"}
+In the panel below, you can explore how the sampling distribution changes as the sample size and number of samples is increased or decreased. Experiment with different sample sizes and number of samples taken. How does the distribution change? What about the sampling distribution mean and standard error? What is a reasonable estimate for the proportion of red balls in the bowl?
+:::
 
-I’ll start with a function that creates the UI for a single variable. It’ll return a range slider for numeric inputs, a multi-select for factor inputs, and NULL (nothing) for all other types.
-
-## {scrolling="false"}
+## {height="50%"}
 
 ```{r}
 #| content: card-sidebar
 #| width: 25%
-
-replicate_count <- c("10"=10,"100"=100,"500"=500,"1000"=1000)
 
 sliderInput("sample_size", "Sample size:", 
             min = 25, max = 100, value = 50, step=25, ticks=FALSE, width="95%")
@@ -114,7 +218,7 @@ selectInput("replications", "Number of samples taken:",
 
 ```{r}
 #| title: Sampling distribution visualization
-plotOutput("distPlot")
+plotOutput("propDistPlot")
 ```
 
 ## {height="20%"}
@@ -132,7 +236,37 @@ valueBoxOutput("sdBox")
 
 # The Central Limit Theorem
 
+## {height="30%"}
 
+::: {.card title="What is the Central Limit Theorem?"}
+
+
+:::
+
+## {height="70%"}
+
+```{r}
+#| content: card-sidebar
+#| width: 25%
+
+replicate_count <- c("10"=10,"100"=100,"500"=500,"1000"=1000)
+
+selectInput("distributions", "Choose a distribution:", 
+            choices=distribution_options, width="95%")
+sliderInput("dist_sample_size", "Sample size:", 
+            min = 25, max = 100, value = 50, step=25, ticks=FALSE, width="95%")
+selectInput("dist_replications", "Number of samples taken:", 
+            choices=replicate_count, selected=replicate_count[2], width="95%")
+```
+
+###
+
+::: {.card title="Distribution PDF"}
+```{r}
+plotOutput("distPdfPlot")
+plotOutput("sampleDistPlot")
+```
+:::
 
 # Bootstrapping
 
