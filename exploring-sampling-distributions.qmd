@@ -41,6 +41,16 @@ sampling_dist_data <- reactive({
     )
 })
 
+boot_dist_data <- reactive({
+  generate_boot_dist(salt_samples, reps=input$boot_replications) |> 
+    summarise(
+      mean_ppm = mean(na_ppm)
+    )
+})
+
+################################################################################
+### RENDER FUNCTIONS
+################################################################################
 output$propDistPlot <- renderPlot({
   
   samples() |> 
@@ -83,6 +93,31 @@ output$sampleDistPlot <- renderPlot({
     )
 })
 
+output$bootDistPlot <- renderPlot({
+
+  # add confidence inverval and the sample mean to the plot in addition to the
+  # bootstrap distribution itself.
+  sample_mean <- mean(salt_samples$na_ppm)
+  std_err <- sd(boot_dist_data()$mean_ppm)
+  dist_mean <- mean(boot_dist_data()$mean_ppm)
+  ci_level <- as.numeric(input$ci_level)
+  ci_lower <- dist_mean - ci_level*std_err
+  ci_upper <- dist_mean + ci_level*std_err
+  
+  boot_dist_data() |> 
+    ggplot(aes(x=mean_ppm)) +
+    geom_histogram(fill="steelblue", colour="black", alpha=0.5, bins=30) +
+    geom_vline(xintercept=sample_mean, linewidth=1, linetype="dashed", colour="grey40") +
+    geom_vline(xintercept=ci_lower, linewidth=1, colour="black") +
+    geom_vline(xintercept=ci_upper, linewidth=1, colour="black") +
+    annotate("rect", xmin=ci_lower, xmax=ci_upper, ymin=0, ymax=Inf, fill="grey80", alpha=0.4) +
+    labs(
+      x="Sample mean",
+      y="Count",
+      title = str_glue("The bootstrap distribution with {input$boot_replications} resamples")
+    )
+})
+
 output$meanBox <- renderValueBox({
   box(
     round(mean(samples()$prop_red),4)
@@ -115,6 +150,10 @@ We often don't know the value of the population parameter that we're trying to s
 **Sample** - A set of observations made on a subset of the population of interest. Measuring the length of 50 trout pulled from a lake, polling potential voters about a policy issue, and inspecting products on an assembly line at random for defects are all examples of sampling.
 
 **Biased & random samples** - When samples are taken, each individual in the population from which samples are taken should have an equal chance of being included in the sample. This results in a *random* sample that is representative of the population. Summary statistics computed from such a sample can be generalized to the larger population. If certain individuals or groups of individuals within the population are more likely to be sampled than others, then the sample is said to be *biased*. Estimates made on a biased sample are more likely to incorrect. As a result, estimates biased samples do not generalize to the population.
+
+**Population parameter** - 
+
+**Point estimate** - 
 
 **Sample statistic** - A summary statistic of a sample drawn from a population that estimates a population parameter of interest. It might be the mean height of college women basketball players or the proportion of voters who support a specific initiative.
 
@@ -186,8 +225,6 @@ The form below allows you to see this for yourself. Experiment with sample size,
 #| content: card-sidebar
 #| width: 25%
 
-replicate_count <- c("10"=10,"100"=100,"500"=500,"1000"=1000)
-
 selectInput("distributions", "Choose a distribution:", 
             choices=distribution_options, width="95%")
 sliderInput("dist_sample_size", "Sample size:", 
@@ -209,12 +246,31 @@ plotOutput("sampleDistPlot")
 
 ## {height="30%"}
 
-::: {.card title="What Bootstrapping?"}
+:::: {.card title="What Bootstrapping?"}
+A mentioned earlier, we typically cannot take multiple samples. Usually, a single sample is taken and it is made as large as possible based on constraints like time and money. If we only have one sample, we don't know anything about the *sampling variance*. Bootstrapping, which is a form of *resampling with replacement*, allows us approximate the sampling distribution with a single sample. The basic idea of sampling with replacement is that we create new bootstrap samples by drawing observations from the original sample and then returning them to the pool to be potentially drawn again. This is what is meant by the term *with replacement*. An observation can be drawn more than once. The new sample will be the same size as the original sample. Replacement is obviously critical as without it, we would just recreate the original sample over and over. By allowing observations to appear more than once, we are introducing *sampling variance*, which allows us to create a distribution. To distinguish this distribution from the *sampling distribution*, we call it a **bootstrap** distribution.
 
+We can use the standard error of the bootstrap distribution to create a **confidence interval** that tells us how confident we are, given the data we have, that the population parameter is contained within the interval. For example, if we created 100 bootstrap distributions we would expect 95% of those distributions to contain the true value of the population parameter.
+
+:::{.callout-caution title="Interpreting confidence intervals"}
+The interpretation of confidence intervals in classical statistics is somewhat confusing. The typical way it is interpreted is that with a 95% confidence interval, there is a 95% chance that the given bootstrap or sampling distribution contains the true population parameter value. This is not correct. Instead, what this confidence interval indicates is that with we generated 100 distributions with the data we have, we would expect 95 of them to contain the true value of the population parameter.
 :::
+::::
 
 ## {height="70%"}
 
-::: {.card title="Sampling Distribution & Confidence Interval"}
+```{r}
+#| content: card-sidebar
+#| width: 25%
 
+selectInput("boot_replications", "Number of resamples:", 
+            choices=replicate_count, selected=replicate_count[2], width="95%")
+selectInput("ci_level", "Select confidence level:", 
+            choices=ci_levels, selected=ci_levels[3], width="95%")
+```
+
+::: {.card title="Bootstrap Distribution & Confidence Interval"}
+```{r}
+#| content: tabset
+plotOutput("bootDistPlot")
+```
 :::
