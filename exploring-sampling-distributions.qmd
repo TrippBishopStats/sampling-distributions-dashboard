@@ -85,15 +85,15 @@ output$sampleDistPlot <- renderPlot({
 
 output$meanBox <- renderValueBox({
   box(
-    round(mean(samples()$prop_red),4),
-    title = "Distribution mean"
+    round(mean(samples()$prop_red),4)
+    # title = "Distribution mean"
   )
 })
 
 output$sdBox <- renderValueBox({
   box(
-    round(sd(samples()$prop_red), 4),
-    title = "Distribution standard error"
+    round(sd(samples()$prop_red), 4)
+    # title = "Distribution standard error"
   )
 })
 ```
@@ -154,18 +154,21 @@ selectInput("replications", "Number of samples taken:",
 plotOutput("propDistPlot")
 ```
 
-## {height="20%"}
+## {height="15%"}
 
 ### {width="50%"}
 
+::: {.valuebox icon="align-bottom" color="blue" title="Distribution mean"}
 ```{r}
 valueBoxOutput("meanBox")
 ```
-
+:::
 ### {width="50%"}
+::: {.valuebox icon="bar-chart-line" color="blue" title="Distribution standard error"}
 ```{r}
 valueBoxOutput("sdBox")
 ```
+:::
 
 # The Central Limit Theorem
 
@@ -195,7 +198,7 @@ selectInput("dist_replications", "Number of samples taken:",
 
 ###
 
-::: {.card title="Distribution PDF"}
+::: {.card title="The Central Limit Theorem in Action"}
 ```{r}
 plotOutput("distPdfPlot")
 plotOutput("sampleDistPlot")
@@ -204,4 +207,14 @@ plotOutput("sampleDistPlot")
 
 # Bootstrapping
 
+## {height="30%"}
 
+::: {.card title="What Bootstrapping?"}
+
+:::
+
+## {height="70%"}
+
+::: {.card title="Sampling Distribution & Confidence Interval"}
+
+:::
