@@ -20,84 +20,6 @@ library(shinydashboard)
 source('global.R', local = FALSE)
 
 ################################################################################
-### FUNCTION DEFINIITIONS
-################################################################################
-
-generate_samples <- function(data, size=50, reps=1) {
-  # coerce the tibble to have specific fields in the specified order.
-  sample_set <- tibble(ball_ID=c(0), colour=c(''), replicate=c(0))
-  
-  for(i in 1:reps) {
-    # draw of new sample
-    sample_draw <- data |> 
-      sample_n(size = size) |> 
-      bind_cols(replicate=i)
-    
-    # add new sample to the master tibble  
-    sample_set <- bind_rows(sample_set, sample_draw)
-  }
-  
-  sample_set |>
-    # remove the dummy row and then rearrange and tibble and add grouping.
-    filter(replicate != 0) |> 
-    relocate(replicate, before=ball_ID) |> 
-    group_by(replicate)
-}
-
-generate_dist_pdf <- function(dist = "norm") {
-  X <- Y <- NULL
-  if (dist == "beta") {
-    X <- seq(from=0, to=1, by=0.005)
-    Y <- dbeta(X, 4, 9)
-  } else if (dist == "chisq") {
-    X <- seq(from=0, to=5, by=0.01)
-    Y <- dchisq(X, df=1)
-  } else if (dist == "gamma") {
-    X <- seq(from=0, to=16, by=0.04)
-    Y <- dgamma(X, shape=2,scale=2)
-  } else if (dist == "unif") {
-    X <- seq(from=0, to=5, by=0.02)
-    Y <- dunif(X, min=1, max=4)
-  } else {
-    X <- seq(from=-25, to=35, by=0.15)
-    Y <- dnorm(X, mean=5, sd=10)
-  }
-  
-  tibble(x=X, y=Y)
-}
-
-generate_sample_dist <- function(dist="norm", size=50, reps=1) {
-  
-  # coerce the tibble to have specific fields in the specified order.
-  sample_set <- tibble(replicate=c(0), x=c(0))
-  
-  for(i in 1:reps) {
-    # draw of new sample
-    if (dist == "beta") {
-      data <- rbeta(size, 4, 9)
-    } else if (dist == "chisq") {
-      data <- rchisq(size, df=1)
-    } else if (dist == "gamma") {
-      data <- rgamma(size, shape=2,scale=2)
-    } else if (dist == "unif") {
-      data <- runif(size, min=1, max=4)
-    } else {
-      data <- rnorm(size, mean=5, sd=10)
-    }
-    
-    sample_draw <- tibble(replicate=i, x=data)
-    
-    # add new sample to the master tibble  
-    sample_set <- bind_rows(sample_set, sample_draw)
-  }
-  
-  sample_set |>
-    # remove the dummy row and then rearrange and tibble and add grouping.
-    filter(replicate != 0) |> 
-    group_by(replicate)
-}
-
-################################################################################
 ### REACTIVE OBJECTS
 ################################################################################
 
@@ -178,18 +100,29 @@ output$sdBox <- renderValueBox({
 
 # Introduction 
 
-## {height="50%"}
+## {height="35%"}
 
 ::: {.card title="Introduction to sampling distributions"}
-**What is a sampling distribution?** After exploring the scenario below, you should have a good of what a sampling distribution is and how it changes based on the sampling procedure employed. You should understand how the number of samples take and the size of the samples affects the mean and standard error of the population parameter being studied. You will also be able to explain the basic idea behind the **Central Limit Theorem** and get some hands on experience with the concept of **bootstrapping**. All set? Let's get started!
+**What is a sampling distribution?** After exploring the scenario below, you should have a good idea of what a sampling distribution is and how it changes based on the sampling procedure employed. You should understand how the number of samples take and the size of the samples affects the estimate of the mean and standard error of the population parameter being studied. You will also be able to explain the basic idea behind the **Central Limit Theorem** and get some hands on experience with the concept of **bootstrapping**. All set? Let's get started!
 
-We often don't know the value of the population parameter that we're trying to study. To better understand the value of the parameter, we can either take a **census** or take one more more **samples**. A census involves making an observation of every individual in the population. This is often either impossible or prohibitively time consuming and expensive. This is why sampling is typically used to make an estimate of the parameter. When sampling, we take one or more samples of a given size from the population. In practice, a single sample is often taken and the sample size is a large as time and budget will allow.
+We often don't know the value of the population parameter that we're trying to study. To better understand the value of the parameter, we can either take a **census** or take one or more **samples**. A census involves making an observation of every individual in the population. This is often either impossible or prohibitively time consuming and expensive. This is why sampling is typically used to make an estimate of the parameter. When sampling, we take one or more samples of a given size from the population. In practice, a single sample is often taken and the sample size is a large as time and budget will allow.
 :::
 
-## {height="50%"}
+## {height="65%"}
 
 ::: {.card title="Important terms"}
 
+**Sample** - A set of observations made on a subset of the population of interest. Measuring the length of 50 trout pulled from a lake, polling potential voters about a policy issue, and inspecting products on an assembly line at random for defects are all examples of sampling.
+
+**Biased & random samples** - When samples are taken, each individual in the population from which samples are taken should have an equal chance of being included in the sample. This results in a *random* sample that is representative of the population. Summary statistics computed from such a sample can be generalized to the larger population. If certain individuals or groups of individuals within the population are more likely to be sampled than others, then the sample is said to be *biased*. Estimates made on a biased sample are more likely to incorrect. As a result, estimates biased samples do not generalize to the population.
+
+**Sample statistic** - A summary statistic of a sample drawn from a population that estimates a population parameter of interest. It might be the mean height of college women basketball players or the proportion of voters who support a specific initiative.
+
+**Sampling variance** - When drawing samples from a population, there will be some variability in the individual observations. This results in variation in the sample statistics computed from the samples.
+
+**Sampling distribution** - When multiple samples are taken and the summary statistic of interest is computed, *sampling variation* will result in a distribution of values for the sample statistic.
+
+**Standard error** - The standard error is simply the standard deviation of the sampling distribution.
 
 :::
 
@@ -198,7 +131,7 @@ We often don't know the value of the population parameter that we're trying to s
 ##
 
 ::: {.card title="A basic sampling scenario"}
-In this scenario, we want to know what proportion of balls in a bowl are red. The bowl contains 2400 balls, so taking a census would be really tedious. There are different shovels that can be used to take samples and many samples can be taken.
+In this scenario, we want to know what proportion of balls in a bowl are red. The bowl contains 2400 balls, so taking a census would be really tedious. There are different shovels that can be used to take samples and many samples can be taken. Whether sampling 25, 50, 75, or 100 balls at a time, it is unlikely that any two samples will have the same proportion of red balls. This is a demonstration of *sampling variance*. The degree of sampling variance in turn has an effect on the sampling distribution.
 
 In the panel below, you can explore how the sampling distribution changes as the sample size and number of samples is increased or decreased. Experiment with different sample sizes and number of samples taken. How does the distribution change? What about the sampling distribution mean and standard error? What is a reasonable estimate for the proportion of red balls in the bowl?
 :::
@@ -239,8 +172,9 @@ valueBoxOutput("sdBox")
 ## {height="30%"}
 
 ::: {.card title="What is the Central Limit Theorem?"}
+The Central Limit Theorem is the pillar that much of classical statistics rests on. This theorem states that the statistics computed from repeatedly sampling from a population will be approximate normally distributed, *regardless of the underlying distribution of the population parameter*. The greater the number of samples, the better this approximation. This is an important result because it allows us to use the normal distribution's symmetry to construct things like *confidence intervals* that help us quantify the uncertainty of our population parameter estimates.
 
-
+The form below allows you to see this for yourself. Experiment with sample size, number of samples, and the nature of the underlying distribution to see the Central Limit Theorem in action. In particular, notice the very different shapes of the underlying distributions that the samples are drawn from.
 :::
 
 ## {height="70%"}
