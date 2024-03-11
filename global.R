@@ -22,7 +22,7 @@ distribution_options <-
   )
 
 replicate_count <- c(
-  "10"=10,
+  "30"=30,
   "100"=100,
   "500"=500,
   "1000"=1000
