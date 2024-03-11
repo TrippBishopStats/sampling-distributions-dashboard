@@ -14,3 +14,13 @@ aside.sidebar.html-fill-container > .html-fill-item {
 #meanBox, #sdBox {
   font-size: 2rem;
 }
+
+div.callout-caution.callout-style-default>.callout-header {
+  flex-direction: row;
+  align-items: center;
+  padding: 5px;
+}
+
+.callout.callout-style-default.callout-caution:not(.no-icon) div.callout-icon-container {
+  flex: 0 1 auto;
+}
