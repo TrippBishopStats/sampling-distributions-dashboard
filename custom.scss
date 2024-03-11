@@ -2,3 +2,15 @@
 aside.sidebar.html-fill-container > .html-fill-item {
   flex: unset;
 }
+
+.quarto-dashboard .card .card-body > .h4:first-child {
+  margin: 0;
+}
+
+.quarto-dashboard .card.bslib-value-box .value-box-title {
+  font-size: 1.1rem;
+}
+
+#meanBox, #sdBox {
+  font-size: 2rem;
+}
