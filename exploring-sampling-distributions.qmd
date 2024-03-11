@@ -104,15 +104,21 @@ output$bootDistPlot <- renderPlot({
   ci_lower <- dist_mean - ci_level*std_err
   ci_upper <- dist_mean + ci_level*std_err
   
-  boot_dist_data() |> 
+  plot <- boot_dist_data() |> 
     ggplot(aes(x=mean_ppm)) +
     geom_histogram(fill="steelblue", colour="black", alpha=0.5, bins=30) +
     geom_vline(xintercept=sample_mean, linewidth=1, linetype="dashed", colour="grey40") +
     geom_vline(xintercept=ci_lower, linewidth=1, colour="black") +
     geom_vline(xintercept=ci_upper, linewidth=1, colour="black") +
-    annotate("rect", xmin=ci_lower, xmax=ci_upper, ymin=0, ymax=Inf, fill="grey80", alpha=0.4) +
+    annotate("rect", xmin=ci_lower, xmax=ci_upper, ymin=0, ymax=Inf, fill="grey80", alpha=0.4)
+    
+  y_anchor <- max(ggplot_build(plot)$data[[1]]$count)/2
+    
+  plot +
+    annotate("text", x=ci_lower-0.05, y=y_anchor,label="Lower end of confidence interval", angle=90, size=6) +
+    annotate("text", x=ci_upper+0.05, y=y_anchor,label="Upper end of confidence interval", angle=270, size=6) +
     labs(
-      x="Sample mean",
+      x="Resample mean",
       y="Count",
       title = str_glue("The bootstrap distribution with {input$boot_replications} resamples")
     )
@@ -151,11 +157,11 @@ We often don't know the value of the population parameter that we're trying to s
 
 **Biased & random samples** - When samples are taken, each individual in the population from which samples are taken should have an equal chance of being included in the sample. This results in a *random* sample that is representative of the population. Summary statistics computed from such a sample can be generalized to the larger population. If certain individuals or groups of individuals within the population are more likely to be sampled than others, then the sample is said to be *biased*. Estimates made on a biased sample are more likely to incorrect. As a result, estimates biased samples do not generalize to the population.
 
-**Population parameter** - 
+**Population parameter** - This is a numeric dimension of the population that we want to estimate a value for. We don't know the true value. If we did, we wouldn't need to estimate it! 
 
-**Point estimate** - 
+**Point estimate** - A summary statistic of a sample drawn from a population that estimates a population parameter of interest. It might be the mean height of college women basketball players or the proportion of voters who support a specific initiative.
 
-**Sample statistic** - A summary statistic of a sample drawn from a population that estimates a population parameter of interest. It might be the mean height of college women basketball players or the proportion of voters who support a specific initiative.
+**Sample statistic** - Another name for point estimate.
 
 **Sampling variance** - When drawing samples from a population, there will be some variability in the individual observations. This results in variation in the sample statistics computed from the samples.
 
@@ -254,6 +260,9 @@ We can use the standard error of the bootstrap distribution to create a **confid
 :::{.callout-caution title="Interpreting confidence intervals"}
 The interpretation of confidence intervals in classical statistics is somewhat confusing. The typical way it is interpreted is that with a 95% confidence interval, there is a 95% chance that the given bootstrap or sampling distribution contains the true population parameter value. This is not correct. Instead, what this confidence interval indicates is that with we generated 100 distributions with the data we have, we would expect 95 of them to contain the true value of the population parameter.
 :::
+
+### The scenario
+In an effort to measure the amount of salt running into Lake Macatawa, a water sample of 32 observations of salt concentration in parts per million was taken from different parts of the lake. From this sample, a bootstrap distribution can be constructed by resampling with replacement. To see how the bootstrap distribution changes experiment with the form below. Notice how the width of the confidence interval changes with level of confidence chosen. What is the range for the 80% and 95% confidence intervals? 
 ::::
 
 ## {height="70%"}
