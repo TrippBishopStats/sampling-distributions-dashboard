@@ -28,6 +28,21 @@ replicate_count <- c(
   "1000"=1000
 )
 
+ci_levels <- c(
+  "80%"=1.282,
+  "90%"=1.64,
+  "95%"=1.96,
+  "99%"=2.576
+)
+
+
+salt_samples <- tibble(ID = 1:32, na_ppm = c(
+  13.0, 18.5, 16.4, 14.8, 19.4, 17.3, 23.2, 24.9,
+  20.8, 19.3, 18.8, 23.1, 15.2, 19.9, 19.1, 18.1,
+  25.1, 16.8, 20.4, 17.4, 25.2, 23.1, 15.3, 19.4, 
+  16.0, 21.7, 15.2, 21.3, 21.5, 16.8, 15.6, 17.6
+))
+
 # generate the bowl with 900 red and 1500 white balls
 bowl <- rep(c("Red", "White"), times=c(900, 1500)) |> 
   # randomise the bowl
@@ -110,5 +125,26 @@ generate_sample_dist <- function(dist="norm", size=50, reps=1) {
   sample_set |>
     # remove the dummy row and then rearrange and tibble and add grouping.
     filter(replicate != 0) |> 
+    group_by(replicate)
+}
+
+generate_boot_dist <- function(data, reps=1) {
+  # coerce the tibble to have specific fields in the specified order.
+  sample_set <- tibble(ID=c(0), na_ppm=c(0),replicate=c(0))
+  size <- nrow(data)
+  for(i in 1:reps) {
+    # draw of new sample
+    sample_draw <- data |> 
+      sample_n(size = size, replace = TRUE) |> 
+      bind_cols(replicate=i)
+    
+    # add new sample to the master tibble  
+    sample_set <- bind_rows(sample_set, sample_draw)
+  }
+  
+  sample_set |>
+    # remove the dummy row and then rearrange and tibble and add grouping.
+    filter(replicate != 0) |> 
+    relocate(replicate, before=ID) |> 
     group_by(replicate)
 }
