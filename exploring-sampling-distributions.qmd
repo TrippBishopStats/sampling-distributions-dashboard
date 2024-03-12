@@ -103,6 +103,7 @@ output$bootDistPlot <- renderPlot({
   ci_level <- as.numeric(input$ci_level)
   ci_lower <- dist_mean - ci_level*std_err
   ci_upper <- dist_mean + ci_level*std_err
+  ci_label <- names(which(ci_levels == input$ci_level))
   
   plot <- boot_dist_data() |> 
     ggplot(aes(x=mean_ppm)) +
@@ -113,20 +114,20 @@ output$bootDistPlot <- renderPlot({
     geom_vline(xintercept=ci_upper, linewidth=1, colour="black") +
     annotate("rect", xmin=ci_lower, xmax=ci_upper, ymin=0, ymax=Inf, fill="grey80", alpha=0.4)
     
-  y_anchor <- max(ggplot_build(plot)$data[[1]]$count)/2
-  y_anchor2 <- max(ggplot_build(plot)$data[[1]]$count)
+  y_anchor <- max(ggplot_build(plot)$data[[1]]$count)
     
   plot +
-    annotate("text", x=sample_mean+0.05, y=y_anchor2*0.9, size=5, 
+    annotate("text", x=sample_mean+0.05, y=y_anchor*0.9, size=5, 
              label=str_glue("Original sample mean: {sample_mean}"), colour="firebrick", hjust="left") +
-    annotate("text", x=dist_mean-0.05, y=y_anchor2*0.95, size=5, 
+    annotate("text", x=dist_mean-0.05, y=y_anchor*0.95, size=5, 
              label=str_glue("Distribution mean: {dist_mean}"), colour="black", hjust="right") +
-    annotate("text", x=ci_lower-0.05, y=y_anchor,label="Lower end of confidence interval", angle=90, size=6) +
-    annotate("text", x=ci_upper+0.05, y=y_anchor,label="Upper end of confidence interval", angle=270, size=6) +
+    annotate("text", x=ci_lower-0.05, y=y_anchor/2,label="Lower end of confidence interval", angle=90, size=6) +
+    annotate("text", x=ci_upper+0.05, y=y_anchor/2,label="Upper end of confidence interval", angle=270, size=6) +
     labs(
       x="Resample mean of salt concentration (ppm)",
       y="Count",
-      title = str_glue("The bootstrap distribution of salt concentration with {input$boot_replications} resamples")
+      title = str_glue("The bootstrap distribution of salt concentration with {input$boot_replications} resamples"),
+      subtitle = str_glue("The {ci_label} confidence interval goes from {round(ci_lower, 2)} to {round(ci_upper, 2)}")
     )
 })
 
