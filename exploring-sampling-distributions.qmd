@@ -97,9 +97,9 @@ output$bootDistPlot <- renderPlot({
 
   # add confidence inverval and the sample mean to the plot in addition to the
   # bootstrap distribution itself.
-  sample_mean <- mean(salt_samples$na_ppm)
+  sample_mean <- round(mean(salt_samples$na_ppm), 2)
   std_err <- sd(boot_dist_data()$mean_ppm)
-  dist_mean <- mean(boot_dist_data()$mean_ppm)
+  dist_mean <- round(mean(boot_dist_data()$mean_ppm), 2)
   ci_level <- as.numeric(input$ci_level)
   ci_lower <- dist_mean - ci_level*std_err
   ci_upper <- dist_mean + ci_level*std_err
@@ -107,20 +107,26 @@ output$bootDistPlot <- renderPlot({
   plot <- boot_dist_data() |> 
     ggplot(aes(x=mean_ppm)) +
     geom_histogram(fill="steelblue", colour="black", alpha=0.5, bins=30) +
-    geom_vline(xintercept=sample_mean, linewidth=1, linetype="dashed", colour="grey40") +
+    geom_vline(xintercept=sample_mean, linewidth=1, colour="firebrick") +
+    geom_vline(xintercept=dist_mean, linewidth=1, linetype="dashed", colour="grey40") +
     geom_vline(xintercept=ci_lower, linewidth=1, colour="black") +
     geom_vline(xintercept=ci_upper, linewidth=1, colour="black") +
     annotate("rect", xmin=ci_lower, xmax=ci_upper, ymin=0, ymax=Inf, fill="grey80", alpha=0.4)
     
   y_anchor <- max(ggplot_build(plot)$data[[1]]$count)/2
+  y_anchor2 <- max(ggplot_build(plot)$data[[1]]$count)
     
   plot +
+    annotate("text", x=sample_mean+0.05, y=y_anchor2*0.9, size=5, 
+             label=str_glue("Original sample mean: {sample_mean}"), colour="firebrick", hjust="left") +
+    annotate("text", x=dist_mean-0.05, y=y_anchor2*0.95, size=5, 
+             label=str_glue("Distribution mean: {dist_mean}"), colour="black", hjust="right") +
     annotate("text", x=ci_lower-0.05, y=y_anchor,label="Lower end of confidence interval", angle=90, size=6) +
     annotate("text", x=ci_upper+0.05, y=y_anchor,label="Upper end of confidence interval", angle=270, size=6) +
     labs(
-      x="Resample mean",
+      x="Resample mean of salt concentration (ppm)",
       y="Count",
-      title = str_glue("The bootstrap distribution with {input$boot_replications} resamples")
+      title = str_glue("The bootstrap distribution of salt concentration with {input$boot_replications} resamples")
     )
 })
 
@@ -253,16 +259,16 @@ plotOutput("sampleDistPlot")
 ## {height="30%"}
 
 :::: {.card title="What Bootstrapping?"}
-A mentioned earlier, we typically cannot take multiple samples. Usually, a single sample is taken and it is made as large as possible based on constraints like time and money. If we only have one sample, we don't know anything about the *sampling variance*. Bootstrapping, which is a form of *resampling with replacement*, allows us approximate the sampling distribution with a single sample. The basic idea of sampling with replacement is that we create new bootstrap samples by drawing observations from the original sample and then returning them to the pool to be potentially drawn again. This is what is meant by the term *with replacement*. An observation can be drawn more than once. The new sample will be the same size as the original sample. Replacement is obviously critical as without it, we would just recreate the original sample over and over. By allowing observations to appear more than once, we are introducing *sampling variance*, which allows us to create a distribution. To distinguish this distribution from the *sampling distribution*, we call it a **bootstrap** distribution.
+A mentioned earlier, we typically cannot take multiple samples. Usually, a single sample is taken and it is made as large as possible based on constraints like time and money. If we only have one sample, we don't know anything about the *sampling variance*. Bootstrapping, which is a form of *resampling with replacement*, allows us approximate the sampling distribution using a single sample. The basic idea of sampling with replacement is that we create new samples by drawing observations from the original sample and then returning them to the pool to be potentially drawn again. This is what is meant by the term *with replacement*. An observation can be drawn more than once. The new sample will be the same size as the original sample. Replacement is obviously critical as without it, we would just recreate the original sample over and over. By allowing observations to appear more than once, we are introducing *sampling variance*, which allows us to create a distribution. To distinguish this distribution from the *sampling distribution*, we call it a **bootstrap** distribution.
 
 We can use the standard error of the bootstrap distribution to create a **confidence interval** that tells us how confident we are, given the data we have, that the population parameter is contained within the interval. For example, if we created 100 bootstrap distributions we would expect 95% of those distributions to contain the true value of the population parameter.
 
 :::{.callout-caution title="Interpreting confidence intervals"}
-The interpretation of confidence intervals in classical statistics is somewhat confusing. The typical way it is interpreted is that with a 95% confidence interval, there is a 95% chance that the given bootstrap or sampling distribution contains the true population parameter value. This is not correct. Instead, what this confidence interval indicates is that with we generated 100 distributions with the data we have, we would expect 95 of them to contain the true value of the population parameter.
+The interpretation of confidence intervals in classical statistics is somewhat confusing. The typical way it is interpreted is that with a 95% confidence interval, there is a 95% chance that the given bootstrap or sampling distribution contains the true population parameter value. This is not correct. Instead, what this confidence interval indicates is that if we generated 100 distributions with the data we have, we would expect 95 of them to contain the true value of the population parameter.
 :::
 
 ### The scenario
-In an effort to measure the amount of salt running into Lake Macatawa, a water sample of 32 observations of salt concentration in parts per million was taken from different parts of the lake. From this sample, a bootstrap distribution can be constructed by resampling with replacement. To see how the bootstrap distribution changes experiment with the form below. Notice how the width of the confidence interval changes with level of confidence chosen. What is the range for the 80% and 95% confidence intervals? 
+In an effort to measure the amount of salt running into Lake Macatawa, a water sample of 32 observations of salt concentration in parts per million was taken from different parts of the lake. From this sample, a bootstrap distribution can be constructed by resampling with replacement. To see how the bootstrap distribution changes, experiment with the form below. Notice how the width of the confidence interval changes with level of confidence chosen. What is the range for the 80% and 95% confidence intervals? What is a reasonable estimate for the mean salt concentration in parts per million (ppm)?
 ::::
 
 ## {height="70%"}
